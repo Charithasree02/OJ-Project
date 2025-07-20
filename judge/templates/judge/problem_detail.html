@@ -1,0 +1,16 @@
+{% extends "base.html" %}
+
+{% block content %}
+    <h2>{{ problem.title }}</h2>
+    <p><strong>Difficulty:</strong> {{ problem.difficulty }}</p>
+    <p>{{ problem.description }}</p>
+
+    <hr>
+
+    <h3>Submit Your Solution</h3>
+    <form method="post">
+        {% csrf_token %}
+        <textarea name="code" rows="10" cols="80" placeholder="Write your code here..."></textarea><br>
+        <button type="submit">Submit</button>
+    </form>
+{% endblock %}

@@ -3,4 +3,8 @@
 {% block content %}
     <h2>Dashboard</h2>
     <p>You are logged in as <strong>{{ user.username }}</strong>.</p>
+
+    <p>
+        <a href="{% url 'problem_list' %}">🔍 View and Solve Problems</a>
+    </p>
 {% endblock %}
