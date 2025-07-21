@@ -1,16 +1,35 @@
 {% extends "base.html" %}
 
 {% block content %}
-    <h2>{{ problem.title }}</h2>
-    <p><strong>Difficulty:</strong> {{ problem.difficulty }}</p>
-    <p>{{ problem.description }}</p>
+  <h2>{{ problem.title }}</h2>
+  <p><strong>Difficulty:</strong> {{ problem.difficulty }}</p>
+  <p>{{ problem.description }}</p>
 
-    <hr>
+  <hr>
 
-    <h3>Submit Your Solution</h3>
-    <form method="post">
-        {% csrf_token %}
-        <textarea name="code" rows="10" cols="80" placeholder="Write your code here..."></textarea><br>
-        <button type="submit">Submit</button>
-    </form>
+  {% if messages %}
+    {% for message in messages %}
+      <p style="color: green;">{{ message }}</p>
+    {% endfor %}
+  {% endif %}
+
+  <h3>Submit Your Solution</h3>
+  <form method="post">
+    {% csrf_token %}
+    
+    {{ form.non_field_errors }}
+
+    <div>
+      {{ form.language.label_tag }}<br>
+      {{ form.language }}
+    </div>
+
+    <div>
+      {{ form.code.label_tag }}<br>
+      {{ form.code }}
+    </div>
+
+    <br>
+    <button type="submit">Submit</button>
+  </form>
 {% endblock %}

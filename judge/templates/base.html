@@ -3,15 +3,41 @@
 <head>
     <title>Django Auth App</title>
     <style>
-        body { font-family: Arial, sans-serif; margin: 2rem; }
-        nav a { margin-right: 15px; }
+        body { font-family: Arial, sans-serif; margin: 2rem; background-color: #f8f9fa; }
+        nav {
+            margin-bottom: 1rem;
+            padding: 1rem;
+            background-color: #343a40;
+            color: white;
+            border-radius: 5px;
+        }
+        nav a {
+            margin-right: 15px;
+            color: #f8f9fa;
+            text-decoration: none;
+        }
+        nav a:hover {
+            text-decoration: underline;
+        }
+        .messages {
+            margin-bottom: 1rem;
+            padding: 0.5rem;
+            background-color: #e2e3e5;
+            border-left: 5px solid #6c757d;
+            border-radius: 5px;
+        }
+        hr {
+            margin-top: 1rem;
+            margin-bottom: 1rem;
+        }
     </style>
 </head>
 <body>
     <nav>
         {% if user.is_authenticated %}
             Welcome, {{ user.username }} |
-            <a href="{% url 'dashboard' %}">Dashboard</a> |
+            <a href="{% url 'dashboard' %}">Dashboard</a>
+            <a href="{% url 'my_submissions' %}">My Submissions</a>
             <a href="{% url 'logout' %}">Logout</a>
         {% else %}
             <a href="{% url 'login' %}">Login</a>
@@ -19,14 +45,18 @@
     </nav>
 
     {% if messages %}
-        <ul>
-            {% for message in messages %}
-                <li>{{ message }}</li>
-            {% endfor %}
-        </ul>
+        <div class="messages">
+            <ul>
+                {% for message in messages %}
+                    <li>{{ message }}</li>
+                {% endfor %}
+            </ul>
+        </div>
     {% endif %}
 
     <hr>
-    {% block content %}{% endblock %}
+
+    {% block content %}
+    {% endblock %}
 </body>
 </html>

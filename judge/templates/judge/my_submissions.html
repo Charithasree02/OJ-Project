@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+
+{% block content %}
+<h2>My Submissions</h2>
+
+<table border="1" cellpadding="8">
+  <tr>
+    <th>Problem</th>
+    <th>Language</th>
+    <th>Code</th>
+    <th>Submitted At</th>
+  </tr>
+  {% for submission in submissions %}
+  <tr>
+    <td>{{ submission.problem.title }}</td>
+    <td>{{ submission.language }}</td>
+    <td><pre>{{ submission.code }}</pre></td>
+    <td>{{ submission.submitted_at }}</td>
+  </tr>
+  {% empty %}
+  <tr>
+    <td colspan="4">You haven't submitted anything yet.</td>
+  </tr>
+  {% endfor %}
+</table>
+{% endblock %}

@@ -2,11 +2,14 @@ from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.forms import UserCreationForm
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
-from .models import Problem
+from .models import Problem, Submission
+from .forms import SubmissionForm
 
+# Home page
 def home(request):
     return render(request, 'judge/home.html')
 
+# User registration
 def register(request):
     if request.method == 'POST':
         form = UserCreationForm(request.POST)
@@ -18,16 +21,41 @@ def register(request):
         form = UserCreationForm()
     return render(request, 'judge/register.html', {'form': form})
 
+# Dashboard (only visible to logged-in users)
 @login_required
 def dashboard(request):
     return render(request, 'judge/dashboard.html')
 
+# List all problems
 @login_required
 def problem_list(request):
     problems = Problem.objects.all().order_by('difficulty', 'created_at')
     return render(request, 'judge/problem_list.html', {'problems': problems})
 
+# Problem detail with submission form
 @login_required
 def problem_detail(request, problem_id):
     problem = get_object_or_404(Problem, id=problem_id)
-    return render(request, 'judge/problem_detail.html', {'problem': problem})
+
+    if request.method == 'POST':
+        form = SubmissionForm(request.POST)
+        if form.is_valid():
+            submission = form.save(commit=False)
+            submission.user = request.user
+            submission.problem = problem
+            submission.save()
+            messages.success(request, 'Code submitted successfully!')
+            return redirect('problem_detail', problem_id=problem.id)
+    else:
+        form = SubmissionForm()
+
+    return render(request, 'judge/problem_detail.html', {
+        'problem': problem,
+        'form': form,
+    })
+from django.contrib.auth.decorators import login_required
+
+@login_required
+def my_submissions(request):
+    submissions = Submission.objects.filter(user=request.user).order_by('-submitted_at')
+    return render(request, 'judge/my_submissions.html', {'submissions': submissions})
