@@ -1,35 +1,23 @@
 {% extends "base.html" %}
-
 {% block content %}
   <h2>{{ problem.title }}</h2>
   <p><strong>Difficulty:</strong> {{ problem.difficulty }}</p>
-  <p>{{ problem.description }}</p>
+  <p>{{ problem.description|linebreaks }}</p>
 
   <hr>
-
-  {% if messages %}
-    {% for message in messages %}
-      <p style="color: green;">{{ message }}</p>
-    {% endfor %}
-  {% endif %}
 
   <h3>Submit Your Solution</h3>
   <form method="post">
     {% csrf_token %}
-    
-    {{ form.non_field_errors }}
-
     <div>
-      {{ form.language.label_tag }}<br>
+      <label for="{{ form.language.id_for_label }}"><strong>Language:</strong></label>
       {{ form.language }}
     </div>
-
-    <div>
-      {{ form.code.label_tag }}<br>
+    <div style="margin-top: 1rem;">
+      <label for="{{ form.code.id_for_label }}"><strong>Code:</strong></label><br>
       {{ form.code }}
     </div>
-
     <br>
-    <button type="submit">Submit</button>
+    <button type="submit">🚀 Submit Code</button>
   </form>
 {% endblock %}

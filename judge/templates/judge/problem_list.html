@@ -1,15 +1,16 @@
 {% extends "base.html" %}
 {% block content %}
-  <h2>Available Problems</h2>
-  <ul>
-    {% for problem in problems %}
-      <li>
-        <a href="{% url 'problem_detail' problem.id %}">
-          {{ problem.title }} - {{ problem.difficulty }}
-        </a>
-      </li>
-    {% empty %}
-      <li>No problems found.</li>
-    {% endfor %}
-  </ul>
+<h2>Available Problems</h2>
+
+<ul>
+  {% for problem in problems %}
+    <li>
+      <a href="{% url 'problem_detail' problem.id %}">
+        <strong>{{ problem.title }}</strong> ({{ problem.difficulty }})
+      </a>
+    </li>
+  {% empty %}
+    <li>No problems found.</li>
+  {% endfor %}
+</ul>
 {% endblock %}
