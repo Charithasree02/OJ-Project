@@ -10,7 +10,7 @@ class ProblemAdmin(admin.ModelAdmin):
     inlines = [TestCaseInline]
 
 class SubmissionAdmin(admin.ModelAdmin):
-    list_display = ('user', 'problem', 'language', 'verdict', 'created_at')
+    list_display = ('user', 'problem', 'language', 'verdict', 'submitted_at')
     readonly_fields = ('output', 'error')
 
 admin.site.register(Problem, ProblemAdmin)

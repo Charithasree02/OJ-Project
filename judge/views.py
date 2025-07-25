@@ -65,3 +65,6 @@ def problem_detail(request, pk):
 def submission_detail(request, pk):
     submission = get_object_or_404(Submission, pk=pk)
     return render(request, 'judge/submission_detail.html', {'submission': submission})
+
+def home(request):
+    return render(request, 'judge/home.html')
