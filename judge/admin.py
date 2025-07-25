@@ -1,12 +1,18 @@
 from django.contrib import admin
-from .models import Problem, Submission
+from .models import Problem, Submission, TestCase
 
-# You can still register Problem as usual
-admin.site.register(Problem)
+class TestCaseInline(admin.TabularInline):
+    model = TestCase
+    extra = 1
 
-# Custom admin view for Submission
-@admin.register(Submission)
+class ProblemAdmin(admin.ModelAdmin):
+    list_display = ('title',)
+    inlines = [TestCaseInline]
+
 class SubmissionAdmin(admin.ModelAdmin):
-    list_display = ('user', 'problem', 'language', 'submitted_at')
-    list_filter = ('language', 'submitted_at')
-    search_fields = ('user__username', 'problem__title')
+    list_display = ('user', 'problem', 'language', 'verdict', 'created_at')
+    readonly_fields = ('output', 'error')
+
+admin.site.register(Problem, ProblemAdmin)
+admin.site.register(Submission, SubmissionAdmin)
+admin.site.register(TestCase)

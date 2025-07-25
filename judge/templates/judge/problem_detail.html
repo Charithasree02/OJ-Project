@@ -1,23 +1,77 @@
-{% extends "base.html" %}
+{% extends 'judge/base.html' %}
+{% load static %}
+
 {% block content %}
+<div class="container mt-4">
   <h2>{{ problem.title }}</h2>
-  <p><strong>Difficulty:</strong> {{ problem.difficulty }}</p>
+  <p><strong>Difficulty:</strong> {{ problem.get_difficulty_display }}</p>
+
+  <h4>Description:</h4>
   <p>{{ problem.description|linebreaks }}</p>
+
+  {% if sample_tests %}
+    <h4>Sample Test Cases:</h4>
+    {% for test in sample_tests %}
+      <div class="card mb-2">
+        <div class="card-body">
+          <strong>Input:</strong>
+          <pre>{{ test.input_data }}</pre>
+          <strong>Expected Output:</strong>
+          <pre>{{ test.expected_output }}</pre>
+        </div>
+      </div>
+    {% endfor %}
+  {% else %}
+    <p><em>No sample test cases provided for this problem.</em></p>
+  {% endif %}
 
   <hr>
 
-  <h3>Submit Your Solution</h3>
-  <form method="post">
+  <h4>Submit Your Code</h4>
+  <form method="POST">
     {% csrf_token %}
-    <div>
-      <label for="{{ form.language.id_for_label }}"><strong>Language:</strong></label>
-      {{ form.language }}
-    </div>
-    <div style="margin-top: 1rem;">
-      <label for="{{ form.code.id_for_label }}"><strong>Code:</strong></label><br>
-      {{ form.code }}
-    </div>
-    <br>
-    <button type="submit">🚀 Submit Code</button>
+    {{ form.as_p }}
+
+    <label for="custom_input"><strong>Custom Input (Optional):</strong></label><br>
+    <textarea name="custom_input" class="form-control" rows="4" placeholder="Enter custom input to test manually (not evaluated against test cases)..."></textarea><br>
+
+    <button type="submit" class="btn btn-success">Run & Submit</button>
   </form>
+
+  {% if submission %}
+    <hr>
+    <h4>Last Verdict:</h4>
+    <p><strong>Verdict:</strong> {{ submission.verdict }}</p>
+    {% if submission.error %}
+      <div class="alert alert-danger"><pre>{{ submission.error }}</pre></div>
+    {% else %}
+      <div class="alert alert-info"><strong>Output:</strong><br><pre>{{ submission.output }}</pre></div>
+    {% endif %}
+  {% endif %}
+
+  {% if previous_submissions %}
+    <hr>
+    <h4>Your Submission History for This Problem</h4>
+    <table class="table table-bordered table-sm">
+      <thead class="thead-dark">
+        <tr>
+          <th>#</th>
+          <th>Code Snippet</th>
+          <th>Verdict</th>
+          <th>Submitted At</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for sub in previous_submissions %}
+        <tr>
+          <td>{{ forloop.counter }}</td>
+          <td><pre style="max-height: 100px; overflow-y: auto;">{{ sub.code|truncatechars:200 }}</pre></td>
+          <td><span class="badge bg-info text-dark">{{ sub.verdict }}</span></td>
+          <td>{{ sub.submitted_at|date:"M d, Y H:i" }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  {% endif %}
+</div>
 {% endblock %}

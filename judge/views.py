@@ -1,78 +1,67 @@
-from django.shortcuts import render, redirect, get_object_or_404
-from django.contrib.auth.forms import UserCreationForm
-from django.contrib import messages
-from django.contrib.auth.decorators import login_required
-from django.contrib.admin.views.decorators import staff_member_required
-from .models import Problem, Submission
-from .forms import SubmissionForm, ProblemForm  # ✅ Make sure both forms are imported
+from django.shortcuts import render, get_object_or_404, redirect
+from .models import Problem, Submission, TestCase
+from .forms import SubmissionForm
+from .code_runner import run_code
 
-# 🏠 Home page
-def home(request):
-    return render(request, 'judge/home.html')
-
-# 🧑‍💻 Registration
-def register(request):
-    if request.method == 'POST':
-        form = UserCreationForm(request.POST)
-        if form.is_valid():
-            form.save()
-            messages.success(request, "✅ Account created successfully. Please log in.")
-            return redirect('login')
-        else:
-            messages.error(request, "❌ Please correct the errors below.")
-    else:
-        form = UserCreationForm()
-    return render(request, 'judge/register.html', {'form': form})
-
-# 👤 Dashboard
-@login_required
-def dashboard(request):
-    return render(request, 'judge/dashboard.html')
-
-# 📃 Problem list
-@login_required
 def problem_list(request):
-    problems = Problem.objects.all().order_by('difficulty', 'created_at')
+    problems = Problem.objects.all()
     return render(request, 'judge/problem_list.html', {'problems': problems})
 
-# 🔍 Problem detail & submission
-@login_required
-def problem_detail(request, problem_id):
-    problem = get_object_or_404(Problem, id=problem_id)
+def problem_detail(request, pk):
+    problem = get_object_or_404(Problem, pk=pk)
+    
+    # ✅ Use correct field names for test case filtering
+    sample_cases = TestCase.objects.filter(problem=problem, is_sample=True, is_hidden=False)
+    hidden_cases = TestCase.objects.filter(problem=problem, is_hidden=True)
 
     if request.method == 'POST':
         form = SubmissionForm(request.POST)
         if form.is_valid():
             submission = form.save(commit=False)
-            submission.user = request.user
             submission.problem = problem
+            submission.user = request.user
             submission.save()
-            messages.success(request, '✅ Code submitted successfully!')
-            return redirect('problem_detail', problem_id=problem.id)
-        else:
-            messages.error(request, '❌ Submission failed. Please correct the form.')
+
+            code = submission.code
+            language = submission.language
+
+            test_cases = TestCase.objects.filter(problem=problem)
+            all_passed = True
+            final_output = ''
+            error_output = ''
+
+            for tc in test_cases:
+                output, error = run_code(code, language, tc.input_data)
+
+                if error:
+                    submission.verdict = 'Runtime Error'
+                    submission.error = error
+                    all_passed = False
+                    break
+                elif output.strip() != tc.expected_output.strip():
+                    submission.verdict = 'Wrong Answer'
+                    submission.output = output
+                    all_passed = False
+                    break
+                else:
+                    final_output += f"{output}\n"
+
+            if all_passed:
+                submission.verdict = 'Accepted'
+                submission.output = final_output.strip()
+
+            submission.save()
+            return redirect('submission_detail', submission.pk)
     else:
         form = SubmissionForm()
 
-    return render(request, 'judge/problem_detail.html', {'problem': problem, 'form': form})
+    return render(request, 'judge/problem_detail.html', {
+        'problem': problem,
+        'form': form,
+        'sample_cases': sample_cases,
+        'hidden_cases': hidden_cases,
+    })
 
-# 📝 View my submissions
-@login_required
-def my_submissions(request):
-    submissions = Submission.objects.filter(user=request.user).order_by('-submitted_at')
-    return render(request, 'judge/my_submissions.html', {'submissions': submissions})
-
-# ➕ Create new problem (admin-only)
-@staff_member_required
-def create_problem(request):
-    if request.method == 'POST':
-        form = ProblemForm(request.POST)
-        if form.is_valid():
-            form.save()
-            messages.success(request, "✅ Problem created successfully.")
-            return redirect('problem_list')
-        else:
-            messages.error(request, "❌ Please fix the errors below.")
-    else:
-        form = ProblemForm()
-    return render(request, 'judge/create_problem.html', {'form': form})
+def submission_detail(request, pk):
+    submission = get_object_or_404(Submission, pk=pk)
+    return render(request, 'judge/submission_detail.html', {'submission': submission})
