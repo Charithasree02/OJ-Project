@@ -39,7 +39,7 @@ def problem_list(request):
 @login_required
 def problem_detail(request, pk):
     problem = get_object_or_404(Problem, pk=pk)
-    sample_cases = TestCase.objects.filter(problem=problem, is_sample=True, is_hidden=False)
+    sample_cases = TestCase.objects.filter(problem=problem, is_hidden=False)
     hidden_cases = TestCase.objects.filter(problem=problem, is_hidden=True)
 
     if request.method == 'POST':
