@@ -15,13 +15,18 @@
     <tbody>
       {% for submission in submissions %}
       <tr style="border-bottom: 1px solid #ddd;">
-        <td style="padding: 10px;">{{ submission.problem.title }}</td>
+        <td style="padding: 10px;">
+          <a href="{% url 'submission_detail' submission.id %}" style="text-decoration: none; color: #007bff;">
+            {{ submission.problem.title }}
+          </a>
+        </td>
         <td style="padding: 10px;">{{ submission.language }}</td>
         <td style="padding: 10px;">
           <details>
             <summary style="cursor: pointer;">View Code</summary>
             <pre style="background: #f8f8f8; padding: 10px; border-radius: 5px; white-space: pre-wrap;">{{ submission.code }}</pre>
           </details>
+          <p><a href="{% url 'submission_detail' submission.id %}">🔍 View Full Details</a></p>
         </td>
         <td style="padding: 10px;">{{ submission.submitted_at|date:"Y-m-d H:i" }}</td>
       </tr>

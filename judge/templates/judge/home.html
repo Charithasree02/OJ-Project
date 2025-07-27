@@ -1,11 +1,13 @@
-{% extends "base.html" %}
-{% block content %}
-<h1>Welcome to the Online Judge</h1>
-<p>This is a platform where you can practice problems and submit your code.</p>
+{% extends "judge/base.html" %}
 
-{% if user.is_authenticated %}
-    <p>Go to your <a href="{% url 'dashboard' %}">Dashboard</a>.</p>
-{% else %}
-    <p><a href="{% url 'login' %}">Login</a> or <a href="{% url 'register' %}">Register</a> to get started.</p>
-{% endif %}
+{% block content %}
+  <div style="padding: 20px;">
+    <h2>Welcome to the Online Judge Dashboard</h2>
+    <ul>
+      <li><a href="{% url 'problem_list' %}">View Problems</a></li>
+      <li><a href="{% url 'submissions' %}">My Submissions</a></li>
+      <li><a href="{% url 'my_submissions' %}">My Submissions</a></li>
+
+    </ul>
+  </div>
 {% endblock %}

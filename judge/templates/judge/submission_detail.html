@@ -1,0 +1,42 @@
+{% extends "judge/base.html" %}
+
+{% block content %}
+  <div style="padding: 20px;">
+    <h2>Submission Details</h2>
+    <hr>
+
+    <p><strong>Problem:</strong> {{ submission.problem.title }}</p>
+    <p><strong>User:</strong> {{ submission.user.username }}</p>
+    <p><strong>Language:</strong> {{ submission.language }}</p>
+    <p><strong>Submitted At:</strong> {{ submission.submitted_at }}</p>
+    <p><strong>Verdict:</strong> 
+      <span style="color: {% if submission.verdict == 'Accepted' %}green{% else %}red{% endif %};">
+        {{ submission.verdict }}
+      </span>
+    </p>
+
+    <h3>Submitted Code:</h3>
+    <pre style="background-color: #f4f4f4; padding: 10px; border-radius: 4px; white-space: pre-wrap;">
+{{ submission.code|escape }}
+    </pre>
+
+    {% if submission.test_results %}
+      <h3>Test Case Results:</h3>
+      <ul style="list-style-type: none; padding-left: 0;">
+        {% for result in test_results %}
+          <li style="margin-bottom: 10px;">
+            <strong>Test {{ forloop.counter }}:</strong>
+            {% if result.passed %}
+              ✅ <span style="color: green;">Passed</span>
+            {% else %}
+              ❌ <span style="color: red;">Failed</span><br>
+              <strong>Input:</strong> <code>{{ result.input }}</code><br>
+              <strong>Expected:</strong> <code>{{ result.expected }}</code><br>
+              <strong>Got:</strong> <code>{{ result.output }}</code>
+            {% endif %}
+          </li>
+        {% endfor %}
+      </ul>
+    {% endif %}
+  </div>
+{% endblock %}

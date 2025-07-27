@@ -1,16 +1,44 @@
 from django.shortcuts import render, get_object_or_404, redirect
 from .models import Problem, Submission, TestCase
-from .forms import SubmissionForm
-from .code_runner import run_code
+from .forms import SubmissionForm, ProblemForm
+from django.contrib.auth.forms import UserCreationForm
+from django.contrib.auth.decorators import login_required
+from django.contrib.admin.views.decorators import staff_member_required
+from django.contrib.auth import login
+from .utils.code_runner import run_code
 
+import json
+from django.http import HttpResponse
+
+
+# -------------------------------
+# Home
+# -------------------------------
+def home(request):
+    return render(request, 'judge/home.html')
+
+
+# -------------------------------
+# Register
+# -------------------------------
+def register(request):
+    return render(request, 'register.html')
+
+
+# -------------------------------
+# View: List of all problems
+# -------------------------------
 def problem_list(request):
     problems = Problem.objects.all()
     return render(request, 'judge/problem_list.html', {'problems': problems})
 
+
+# -------------------------------
+# View: Problem detail and submission
+# -------------------------------
+@login_required
 def problem_detail(request, pk):
     problem = get_object_or_404(Problem, pk=pk)
-    
-    # ✅ Use correct field names for test case filtering
     sample_cases = TestCase.objects.filter(problem=problem, is_sample=True, is_hidden=False)
     hidden_cases = TestCase.objects.filter(problem=problem, is_hidden=True)
 
@@ -20,38 +48,62 @@ def problem_detail(request, pk):
             submission = form.save(commit=False)
             submission.problem = problem
             submission.user = request.user
+            submission.verdict = 'Pending'
             submission.save()
 
             code = submission.code
             language = submission.language
-
             test_cases = TestCase.objects.filter(problem=problem)
-            all_passed = True
-            final_output = ''
-            error_output = ''
 
-            for tc in test_cases:
-                output, error = run_code(code, language, tc.input_data)
+            all_test_results = []
+            all_passed = True
+            encountered_runtime_error = False
+
+            for case in test_cases:
+                input_data = case.input_data
+                expected_output = case.expected_output.strip()
+                output, error = run_code(code, language, input_data)
 
                 if error:
-                    submission.verdict = 'Runtime Error'
-                    submission.error = error
                     all_passed = False
+                    encountered_runtime_error = True
+                    all_test_results.append({
+                        "input": input_data,
+                        "expected": expected_output,
+                        "output": error,
+                        "passed": False,
+                        "error": True
+                    })
                     break
-                elif output.strip() != tc.expected_output.strip():
-                    submission.verdict = 'Wrong Answer'
-                    submission.output = output
-                    all_passed = False
-                    break
-                else:
-                    final_output += f"{output}\n"
 
-            if all_passed:
+                output = output.strip()
+                passed = output == expected_output
+
+                all_test_results.append({
+                    "input": input_data,
+                    "expected": expected_output,
+                    "output": output,
+                    "passed": passed
+                })
+
+                if not passed:
+                    all_passed = False
+
+            submission.test_results_json = json.dumps(all_test_results, indent=2)
+
+            if encountered_runtime_error:
+                submission.verdict = 'Runtime Error'
+                submission.error = all_test_results[-1]["output"]
+            elif all_passed:
                 submission.verdict = 'Accepted'
-                submission.output = final_output.strip()
+            else:
+                submission.verdict = 'Wrong Answer'
 
+            submission.output = '\n'.join(
+                [r["output"] for r in all_test_results if not r.get("error")]
+            )
             submission.save()
-            return redirect('submission_detail', submission.pk)
+            return redirect('submission_detail', submission_id=submission.pk)
     else:
         form = SubmissionForm()
 
@@ -59,12 +111,79 @@ def problem_detail(request, pk):
         'problem': problem,
         'form': form,
         'sample_cases': sample_cases,
-        'hidden_cases': hidden_cases,
+        'submission': submission if request.method == 'POST' else None,
+        'previous_submissions': Submission.objects.filter(user=request.user, problem=problem).order_by('-submitted_at'),
     })
 
-def submission_detail(request, pk):
-    submission = get_object_or_404(Submission, pk=pk)
-    return render(request, 'judge/submission_detail.html', {'submission': submission})
 
-def home(request):
-    return render(request, 'judge/home.html')
+# -------------------------------
+# View: Submission detail + test results
+# -------------------------------
+@login_required
+def submission_detail(request, submission_id):
+    submission = get_object_or_404(Submission, id=submission_id)
+    try:
+        test_results = json.loads(submission.test_results_json)
+    except json.JSONDecodeError:
+        test_results = None
+
+    return render(request, 'judge/submission_detail.html', {
+        'submission': submission,
+        'test_results': test_results
+    })
+
+
+# -------------------------------
+# View: Dashboard (optional recent submissions)
+# -------------------------------
+@login_required
+def dashboard(request):
+    problems = Problem.objects.all()
+    submissions = Submission.objects.filter(user=request.user).order_by('-submitted_at')[:5]
+    return render(request, 'judge/dashboard.html', {
+        'problems': problems,
+        'recent_submissions': submissions
+    })
+
+
+# -------------------------------
+# View: All submissions by user
+# -------------------------------
+@login_required
+def my_submissions(request):
+    submissions = Submission.objects.filter(user=request.user).order_by('-submitted_at')
+    return render(request, 'judge/my_submissions.html', {'submissions': submissions})
+
+
+# -------------------------------
+# Admin View: Create problem
+# -------------------------------
+@staff_member_required
+def create_problem(request):
+    if request.method == 'POST':
+        form = ProblemForm(request.POST)
+        if form.is_valid():
+            problem = form.save()
+            return redirect('problem_detail', pk=problem.pk)
+    else:
+        form = ProblemForm()
+    return render(request, 'judge/create_problem.html', {'form': form})
+
+
+# -------------------------------
+# Admin View: All Submissions
+# -------------------------------
+def submission_list(request):
+    submissions = Submission.objects.all()
+    return render(request, 'judge/submission_list.html', {'submissions': submissions})
+
+
+# -------------------------------
+# Dummy views (optional)
+# -------------------------------
+def login_view(request):
+    return HttpResponse("Login Page")
+
+
+def submit_solution(request):
+    return HttpResponse("Submit Page")
