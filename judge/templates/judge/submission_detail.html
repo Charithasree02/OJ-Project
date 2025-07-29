@@ -1,42 +1,60 @@
-{% extends "judge/base.html" %}
+{% extends 'judge/base.html' %}
+{% load static %}
 
 {% block content %}
-  <div style="padding: 20px;">
-    <h2>Submission Details</h2>
-    <hr>
+<div class="container mt-4">
+  <h2>Submission Details</h2>
 
-    <p><strong>Problem:</strong> {{ submission.problem.title }}</p>
-    <p><strong>User:</strong> {{ submission.user.username }}</p>
-    <p><strong>Language:</strong> {{ submission.language }}</p>
-    <p><strong>Submitted At:</strong> {{ submission.submitted_at }}</p>
-    <p><strong>Verdict:</strong> 
-      <span style="color: {% if submission.verdict == 'Accepted' %}green{% else %}red{% endif %};">
-        {{ submission.verdict }}
-      </span>
-    </p>
+  <p><strong>Problem:</strong> {{ submission.problem.title }}</p>
+  <p><strong>Language:</strong> {{ submission.language }}</p>
+  <p><strong>Verdict:</strong> <span class="badge bg-primary">{{ submission.verdict }}</span></p>
+  <p><strong>Submitted At:</strong> {{ submission.submitted_at|date:"M d, Y H:i" }}</p>
 
-    <h3>Submitted Code:</h3>
-    <pre style="background-color: #f4f4f4; padding: 10px; border-radius: 4px; white-space: pre-wrap;">
-{{ submission.code|escape }}
-    </pre>
+  <h4>Your Code:</h4>
+  <pre style="background: #f8f9fa; padding: 10px;">{{ submission.code }}</pre>
 
-    {% if submission.test_results %}
-      <h3>Test Case Results:</h3>
-      <ul style="list-style-type: none; padding-left: 0;">
-        {% for result in test_results %}
-          <li style="margin-bottom: 10px;">
-            <strong>Test {{ forloop.counter }}:</strong>
-            {% if result.passed %}
-              ✅ <span style="color: green;">Passed</span>
+  {% if test_results %}
+    <h4>Test Case Results:</h4>
+    {% for test in test_results %}
+      <div class="card mb-3 {% if test.passed %}border-success{% else %}border-danger{% endif %}">
+        <div class="card-body">
+          <p><strong>Input:</strong></p>
+          <pre>{{ test.input }}</pre>
+
+          <p><strong>Expected Output:</strong></p>
+          <pre>{{ test.expected }}</pre>
+
+          <p><strong>Your Output:</strong></p>
+          <pre>{{ test.output }}</pre>
+
+          {% if test.error %}
+            <p><strong>Error:</strong></p>
+            <pre>{{ test.output }}</pre>
+          {% endif %}
+
+          <p>
+            <strong>Result:</strong>
+            {% if test.passed %}
+              ✅ <span class="text-success">Passed</span>
             {% else %}
-              ❌ <span style="color: red;">Failed</span><br>
-              <strong>Input:</strong> <code>{{ result.input }}</code><br>
-              <strong>Expected:</strong> <code>{{ result.expected }}</code><br>
-              <strong>Got:</strong> <code>{{ result.output }}</code>
+              ❌ <span class="text-danger">Failed</span>
             {% endif %}
-          </li>
-        {% endfor %}
-      </ul>
+          </p>
+        </div>
+      </div>
+    {% endfor %}
+  {% else %}
+    <h4>Output:</h4>
+    {% if submission.output %}
+      <div class="alert alert-info"><strong>Output:</strong>
+        <pre class="mb-0">{{ submission.output }}</pre>
+      </div>
     {% endif %}
-  </div>
+    {% if submission.error %}
+      <div class="alert alert-danger"><strong>Error:</strong>
+        <pre class="mb-0">{{ submission.error }}</pre>
+      </div>
+    {% endif %}
+  {% endif %}
+</div>
 {% endblock %}

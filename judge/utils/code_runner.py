@@ -1,15 +1,14 @@
 import subprocess
 import uuid
 import os
+import tempfile
 from .language_settings import LANGUAGE_SETTINGS
-
-
 def run_code(code, language, input_data):
     file_id = str(uuid.uuid4())
     settings = LANGUAGE_SETTINGS.get(language.lower())
-    
+
     if settings is None:
-        return '', f"Unsupported language: {language}"
+        return {"output": "", "error": f"❌ Unsupported language: {language}"}
 
     ext = settings['extension']
     filename = f'{file_id}{ext}'
@@ -18,24 +17,32 @@ def run_code(code, language, input_data):
     with open(file_path, 'w') as f:
         f.write(code)
 
-    exe_output = ''
-    exe_error = ''
+    output = ''
+    error = ''
+    exe_name = ''
 
     try:
+        # Compile if necessary (C++ or Java)
         if settings.get("compile"):
-            exe_name = os.path.join('/tmp', f'{file_id}_exe')
-            compile_result = subprocess.run(
-                settings['compile_cmd'](file_path, exe_name),
-                stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True
-            )
-            if compile_result.returncode != 0:
-                return '', compile_result.stderr.strip()
+            exe_name = os.path.join('/tmp', f'{file_id}_exe') if language == 'cpp' else file_path.replace('.java', '')
+            compile_cmd = settings['compile_cmd'](file_path, exe_name)
 
-            run_cmd = settings['run_cmd'](exe_name if language.lower() == "cpp" else filename)
+            compile_proc = subprocess.run(
+                compile_cmd,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                text=True
+            )
+
+            if compile_proc.returncode != 0:
+                return {"output": "", "error": compile_proc.stderr.strip()}
+
+            run_cmd = settings['run_cmd'](exe_name)
         else:
             run_cmd = settings['run_cmd'](file_path)
 
-        run_result = subprocess.run(
+        # Run the code
+        run_proc = subprocess.run(
             run_cmd,
             input=input_data,
             stdout=subprocess.PIPE,
@@ -44,22 +51,24 @@ def run_code(code, language, input_data):
             timeout=5
         )
 
-        exe_output = run_result.stdout.strip()
-        exe_error = run_result.stderr.strip()
+        output = run_proc.stdout.strip()
+        error = run_proc.stderr.strip()
 
     except subprocess.TimeoutExpired:
-        exe_error = 'Execution timed out.'
+        error = '❌ Execution timed out.'
     except Exception as e:
-        exe_error = f'Error: {str(e)}'
+        error = f'❌ Internal Error: {str(e)}'
     finally:
-        # Clean up
+        # Clean up files
         try: os.remove(file_path)
         except: pass
-        if language.lower() == "cpp":
+        if language == "cpp" and exe_name and os.path.exists(exe_name):
             try: os.remove(exe_name)
             except: pass
-        elif language.lower() == "java":
-            try: os.remove(file_path.replace('.java', '.class'))
-            except: pass
-
-    return exe_output, exe_error
+        elif language == "java":
+            class_file = file_path.replace('.java', '.class')
+            if os.path.exists(class_file):
+                try: os.remove(class_file)
+                except: pass
+         
+    return {"output": output, "error": error}

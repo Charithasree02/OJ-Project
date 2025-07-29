@@ -15,9 +15,9 @@
       <div class="card mb-2">
         <div class="card-body">
           <strong>Input:</strong>
-          <pre>{{ test.input_data }}</pre>
+          <pre class="mb-2">{{ test.input_data }}</pre>
           <strong>Expected Output:</strong>
-          <pre>{{ test.expected_output }}</pre>
+          <pre class="mb-0">{{ test.expected_output }}</pre>
         </div>
       </div>
     {% endfor %}
@@ -28,24 +28,34 @@
   <hr>
 
   <h4>Submit Your Code</h4>
-  <form method="POST">
+  <form method="POST" class="mb-3">
     {% csrf_token %}
     {{ form.as_p }}
 
-    <label for="custom_input"><strong>Custom Input (Optional):</strong></label><br>
-    <textarea name="custom_input" class="form-control" rows="4" placeholder="Enter custom input to test manually (not evaluated against test cases)..."></textarea><br>
+    <label for="custom_input"><strong>Custom Input (Optional):</strong></label>
+    <textarea name="custom_input" class="form-control" rows="4"
+      placeholder="Enter custom input to test manually (not evaluated against test cases)...">{{ request.POST.custom_input }}</textarea>
 
-    <button type="submit" class="btn btn-success">Run & Submit</button>
+    <div class="mt-3">
+      <button type="submit" class="btn btn-success">Run & Submit</button>
+    </div>
   </form>
 
   {% if submission %}
     <hr>
     <h4>Last Verdict:</h4>
     <p><strong>Verdict:</strong> {{ submission.verdict }}</p>
+
+    {% if submission.output %}
+      <div class="alert alert-info"><strong>Output:</strong>
+        <pre class="mb-0">{{ submission.output }}</pre>
+      </div>
+    {% endif %}
+
     {% if submission.error %}
-      <div class="alert alert-danger"><pre>{{ submission.error }}</pre></div>
-    {% else %}
-      <div class="alert alert-info"><strong>Output:</strong><br><pre>{{ submission.output }}</pre></div>
+      <div class="alert alert-danger mt-2"><strong>Error:</strong>
+        <pre class="mb-0">{{ submission.error }}</pre>
+      </div>
     {% endif %}
   {% endif %}
 
@@ -63,12 +73,12 @@
       </thead>
       <tbody>
         {% for sub in previous_submissions %}
-        <tr>
-          <td>{{ forloop.counter }}</td>
-          <td><pre style="max-height: 100px; overflow-y: auto;">{{ sub.code|truncatechars:200 }}</pre></td>
-          <td><span class="badge bg-info text-dark">{{ sub.verdict }}</span></td>
-          <td>{{ sub.submitted_at|date:"M d, Y H:i" }}</td>
-        </tr>
+          <tr>
+            <td>{{ forloop.counter }}</td>
+            <td><pre style="max-height: 120px; overflow-y: auto;">{{ sub.code|truncatechars:200 }}</pre></td>
+            <td><span class="badge bg-info text-dark">{{ sub.verdict }}</span></td>
+            <td>{{ sub.submitted_at|date:"M d, Y H:i" }}</td>
+          </tr>
         {% endfor %}
       </tbody>
     </table>

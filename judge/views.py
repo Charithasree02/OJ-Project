@@ -39,80 +39,89 @@ def problem_list(request):
 @login_required
 def problem_detail(request, pk):
     problem = get_object_or_404(Problem, pk=pk)
-    sample_cases = TestCase.objects.filter(problem=problem, is_hidden=False)
-    hidden_cases = TestCase.objects.filter(problem=problem, is_hidden=True)
+    # sample tests = visible to user
+    sample_tests = TestCase.objects.filter(problem=problem, is_hidden=False)
+    previous_submissions = Submission.objects.filter(
+        user=request.user, problem=problem
+    ).order_by('-submitted_at')
 
-    if request.method == 'POST':
+    if request.method == "POST":
         form = SubmissionForm(request.POST)
         if form.is_valid():
+            custom_input = request.POST.get('custom_input', '')
             submission = form.save(commit=False)
-            submission.problem = problem
             submission.user = request.user
+            submission.problem = problem
             submission.verdict = 'Pending'
             submission.save()
 
-            code = submission.code
-            language = submission.language
-            test_cases = TestCase.objects.filter(problem=problem)
+            # Run with custom input if provided; else evaluate on all test cases
+            if custom_input.strip():
+                out, err = run_code(submission.code, submission.language, custom_input)
+                submission.output = out
+                submission.error = err
+                submission.verdict = "Accepted" if not err else "Runtime Error"
+                submission.save()
+                return redirect('submission_detail', submission_id=submission.pk)
+            else:
+                # (Your existing full evaluation against all test cases is fine,
+                # but if you want to keep it simple, you can leave only custom-run flow.)
+                # For now we keep your original evaluation flow:
+                test_cases = TestCase.objects.filter(problem=problem)
+                all_test_results = []
+                all_passed = True
+                encountered_runtime_error = False
 
-            all_test_results = []
-            all_passed = True
-            encountered_runtime_error = False
+                for case in test_cases:
+                    input_data = case.input_data
+                    expected_output = case.expected_output.strip()
+                    output, error = run_code(submission.code, submission.language, input_data)
 
-            for case in test_cases:
-                input_data = case.input_data
-                expected_output = case.expected_output.strip()
-                output, error = run_code(code, language, input_data)
+                    if error:
+                        all_passed = False
+                        encountered_runtime_error = True
+                        all_test_results.append({
+                            "input": input_data,
+                            "expected": expected_output,
+                            "output": error,
+                            "passed": False,
+                            "error": True
+                        })
+                        break
 
-                if error:
-                    all_passed = False
-                    encountered_runtime_error = True
+                    output = output.strip()
+                    passed = output == expected_output
                     all_test_results.append({
                         "input": input_data,
                         "expected": expected_output,
-                        "output": error,
-                        "passed": False,
-                        "error": True
+                        "output": output,
+                        "passed": passed
                     })
-                    break
+                    if not passed:
+                        all_passed = False
 
-                output = output.strip()
-                passed = output == expected_output
-
-                all_test_results.append({
-                    "input": input_data,
-                    "expected": expected_output,
-                    "output": output,
-                    "passed": passed
-                })
-
-                if not passed:
-                    all_passed = False
-
-            submission.test_results_json = json.dumps(all_test_results, indent=2)
-
-            if encountered_runtime_error:
-                submission.verdict = 'Runtime Error'
-                submission.error = all_test_results[-1]["output"]
-            elif all_passed:
-                submission.verdict = 'Accepted'
-            else:
-                submission.verdict = 'Wrong Answer'
-
-            submission.output = '\n'.join(
-                [r["output"] for r in all_test_results if not r.get("error")]
-            )
-            submission.save()
-            return redirect('submission_detail', submission_id=submission.pk)
+                submission.test_results_json = json.dumps(all_test_results, indent=2)
+                if encountered_runtime_error:
+                    submission.verdict = 'Runtime Error'
+                    submission.error = all_test_results[-1]["output"]
+                elif all_passed:
+                    submission.verdict = 'Accepted'
+                else:
+                    submission.verdict = 'Wrong Answer'
+                submission.output = '\n'.join(
+                    [r["output"] for r in all_test_results if not r.get("error")]
+                )
+                submission.save()
+                return redirect('submission_detail', submission_id=submission.pk)
     else:
         form = SubmissionForm()
 
     return render(request, 'judge/problem_detail.html', {
         'problem': problem,
         'form': form,
-        'sample_cases': sample_cases,
-        'submission': submission if request.method == 'POST' else None,
-        'previous_submissions': Submission.objects.filter(user=request.user, problem=problem).order_by('-submitted_at'),
+        'sample_tests': sample_tests,     # <-- matches template name
+        'submission': None,
+        'previous_submissions': previous_submissions,
     })
 
 
